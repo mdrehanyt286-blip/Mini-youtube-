@@ -1,0 +1,92 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- Playlists ---
+    match /playlists/{playlistId} {
+      allow read: if isSignedIn() && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      
+      allow create: if isSignedIn() 
+        && incoming().userId == request.auth.uid
+        && incoming().name is string && incoming().name.size() <= 100
+        && incoming().videos is list && incoming().videos.size() <= 100
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+
+      allow update: if isOwner(existing().userId)
+        && incoming().userId == existing().userId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          incoming().diff(existing()).affectedKeys().hasOnly(['name', 'videos', 'updatedAt'])
+        );
+        
+      allow delete: if isOwner(existing().userId);
+    }
+
+    // --- Comments ---
+    match /comments/{commentId} {
+      allow read, list: if true;
+      allow create: if isSignedIn() 
+        && incoming().userId == request.auth.uid
+        && incoming().text is string && incoming().text.size() <= 1000
+        && incoming().createdAt == request.time;
+      allow delete: if isOwner(existing().userId);
+    }
+
+    // --- Subscriptions ---
+    match /subscriptions/{subId} {
+      allow read, list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid;
+      allow delete: if isOwner(existing().userId);
+    }
+
+    // --- User Videos ---
+    match /userVideos/{videoId} {
+      allow read: if true;
+      allow list: if true;
+      allow create: if isSignedIn() 
+        && incoming().userId == request.auth.uid
+        && incoming().createdAt == request.time;
+      allow delete: if isOwner(existing().userId);
+    }
+
+    // --- History ---
+    match /history/{historyId} {
+      allow read, list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      
+      allow create: if isSignedIn()
+        && incoming().userId == request.auth.uid
+        && incoming().videoId is string && incoming().videoId.size() <= 50
+        && incoming().watchedAt == request.time;
+        
+      allow delete: if isOwner(existing().userId);
+    }
+  }
+}

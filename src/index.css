@@ -1,0 +1,29 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", "Roboto", ui-sans-serif, system-ui;
+  --color-yt-black: #0f0f0f;
+  --color-yt-dark-grey: #272727;
+  --color-yt-light-grey: #aaaaaa;
+}
+
+@layer base {
+  body {
+    @apply bg-yt-black text-white font-sans;
+  }
+}
+
+.video-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

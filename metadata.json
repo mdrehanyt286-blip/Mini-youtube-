@@ -1,0 +1,13 @@
+{
+  "name": "MiniTube AI",
+  "description": "A modern AI-powered YouTube player with voice commands, Firebase playlists, and secure streaming.",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "Firebase",
+    "Youtube API",
+    "Voice Search",
+    "React"
+  ]
+}

@@ -1,0 +1,92 @@
+{
+  "entities": {
+    "playlist": {
+      "title": "Playlist",
+      "description": "A user-created video playlist",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "videos": { "type": "array" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "name", "videos"]
+    },
+    "history": {
+      "title": "Watch History",
+      "description": "Videos watched by the user",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "videoId": { "type": "string" },
+        "title": { "type": "string" },
+        "thumbnail": { "type": "string" },
+        "watchedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "videoId", "watchedAt"]
+    },
+    "comment": {
+      "title": "Comment",
+      "description": "User comment on a video",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userPhoto": { "type": "string" },
+        "videoId": { "type": "string" },
+        "text": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "videoId", "text", "createdAt"]
+    },
+    "subscription": {
+      "title": "Subscription",
+      "description": "User subscribed channel",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "channelTitle": { "type": "string" },
+        "subscribedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "channelTitle"]
+    },
+    "userVideo": {
+      "title": "User Uploaded Video",
+      "description": "Video added to the platform by the user",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "videoId": { "type": "string" },
+        "title": { "type": "string" },
+        "thumbnail": { "type": "string" },
+        "channelTitle": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "videoId", "title"]
+    }
+  },
+  "firestore": {
+    "/playlists/{playlistId}": {
+      "schema": "playlist",
+      "description": "User playlists"
+    },
+    "/history/{historyId}": {
+      "schema": "history",
+      "description": "User watch history"
+    },
+    "/comments/{commentId}": {
+      "schema": "comment",
+      "description": "Video comments"
+    },
+    "/subscriptions/{subId}": {
+      "schema": "subscription",
+      "description": "User channel subscriptions"
+    },
+    "/userVideos/{videoId}": {
+      "schema": "userVideo",
+      "description": "User uploaded/added videos"
+    }
+  }
+}
