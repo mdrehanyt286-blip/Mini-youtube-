@@ -127,7 +127,8 @@ export default function App() {
       }
       setNextPageToken(res.data.nextPageToken || null);
     } catch (err: any) {
-      setErrorMsg("Network Error: Could not connect to API.");
+      const msg = err.response?.data?.detail || err.response?.data?.error || "Network Error: Could not connect to API.";
+      setErrorMsg(msg);
     } finally {
       setIsFetchingMore(false);
     }
@@ -173,7 +174,8 @@ export default function App() {
       }
       setNextPageToken(res.data.nextPageToken || null);
     } catch (err: any) {
-      setErrorMsg("Search failed.");
+      const msg = err.response?.data?.detail || err.response?.data?.error || "Search failed.";
+      setErrorMsg(msg);
     } finally {
       setIsFetchingMore(false);
     }
@@ -195,6 +197,7 @@ export default function App() {
   const handleCategoryClick = (cat: string) => {
     setCurrentCategory(cat);
     setNextPageToken(null);
+    setSearchQuery(''); // Clear search query on category change
     
     // Auto Incognito for Adult Categories
     if (cat === 'Adult Movies' || cat === 'Sexy Videos') {

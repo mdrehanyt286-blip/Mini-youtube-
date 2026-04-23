@@ -11,6 +11,32 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const getApiKey = () => process.env.YOUTUBE_API_KEY || process.env.VITE_YOUTUBE_API_KEY;
+
+// Simple in-memory cache to save quota
+const cache = new Map<string, { data: any, timestamp: number }>();
+const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+
+const handleYoutubeError = (error: any, res: any, context: string) => {
+  if (error.response?.data) {
+    console.error(`YouTube ${context} Error Detail:`, JSON.stringify(error.response.data, null, 2));
+    const apiMsg = error.response.data.error?.message || "Unknown YouTube error";
+    const reason = error.response.data.error?.errors?.[0]?.reason || "unknown";
+    
+    let userFriendlyMsg = apiMsg;
+    if (reason === 'quotaExceeded') {
+      userFriendlyMsg = "YouTube API Quota Limit Khatam (Reset hone tak intezar karein).";
+    } else if (reason === 'keyInvalid') {
+      userFriendlyMsg = "Invalid API Key. Please check your YOUTUBE_API_KEY.";
+    }
+
+    res.status(500).json({ error: `Failed during ${context}`, detail: userFriendlyMsg, raw: error.response.data });
+  } else {
+    console.error(`YouTube ${context} Error:`, error.message);
+    res.status(500).json({ error: `Failed during ${context}`, detail: error.message });
+  }
+};
+
 async function startServer() {
   const app = express();
   const PORT = 3000;
@@ -26,12 +52,18 @@ async function startServer() {
   // YouTube API Proxy
   app.get("/api/videos/search", async (req, res) => {
     const { q, maxResults = 12, pageToken } = req.query;
-    const apiKey = process.env.YOUTUBE_API_KEY || process.env.VITE_YOUTUBE_API_KEY;
+    const apiKey = getApiKey();
 
     if (!apiKey || apiKey === "YOUR_YOUTUBE_API_KEY") {
       return res.status(500).json({ 
         error: "YouTube API Key is missing. Please add YOUTUBE_API_KEY to your Secrets." 
       });
+    }
+
+    const cacheKey = `search-${q}-${maxResults}-${pageToken}`;
+    const cached = cache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      return res.json(cached.data);
     }
 
     try {
@@ -72,18 +104,24 @@ async function startServer() {
         });
       }
 
+      cache.set(cacheKey, { data: searchRes.data, timestamp: Date.now() });
       res.json(searchRes.data);
     } catch (error: any) {
-      console.error("YouTube Search Error:", error.response?.data || error.message);
-      res.status(500).json({ error: "Failed to fetch videos from YouTube" });
+      handleYoutubeError(error, res, "Search");
     }
   });
 
   app.get("/api/videos/related", async (req, res) => {
     const { videoId, pageToken } = req.query;
-    const apiKey = process.env.YOUTUBE_API_KEY || process.env.VITE_YOUTUBE_API_KEY;
+    const apiKey = getApiKey();
 
     if (!apiKey) return res.status(500).json({ error: "API Key missing" });
+
+    const cacheKey = `related-${videoId}-${pageToken}`;
+    const cached = cache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      return res.json(cached.data);
+    }
 
     try {
       let searchData;
@@ -138,16 +176,23 @@ async function startServer() {
           return item;
         });
       }
+      cache.set(cacheKey, { data: searchData, timestamp: Date.now() });
       res.json(searchData);
     } catch (error: any) {
-      res.status(500).json({ error: "Failed to fetch related videos" });
+      handleYoutubeError(error, res, "RelatedVideos");
     }
   });
 
   app.get("/api/videos/trending", async (req, res) => {
     const { pageToken } = req.query;
-    const apiKey = process.env.YOUTUBE_API_KEY;
+    const apiKey = getApiKey();
     if (!apiKey) return res.status(500).json({ error: "YOUTUBE_API_KEY is not configured" });
+
+    const cacheKey = `trending-${pageToken}`;
+    const cached = cache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      return res.json(cached.data);
+    }
 
     try {
       const response = await axios.get("https://www.googleapis.com/youtube/v3/videos", {
@@ -160,9 +205,10 @@ async function startServer() {
           key: apiKey,
         },
       });
+      cache.set(cacheKey, { data: response.data, timestamp: Date.now() });
       res.json(response.data);
     } catch (error: any) {
-      res.status(500).json({ error: "Failed to fetch trending videos" });
+      handleYoutubeError(error, res, "Trending");
     }
   });
 
