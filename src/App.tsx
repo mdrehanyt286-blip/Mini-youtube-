@@ -9,6 +9,7 @@ import VideoCard from './components/VideoCard';
 import VideoPlayer from './components/VideoPlayer';
 import Sidebar from './components/Sidebar';
 import Navbar from './components/Navbar';
+import UploadModal from './components/UploadModal';
 
 export default function App() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
@@ -90,6 +91,12 @@ export default function App() {
   useEffect(() => {
     fetchTrending();
   }, []);
+
+  useEffect(() => {
+    if (currentCategory === 'Uploaded') {
+      setVideos(userVideos);
+    }
+  }, [userVideos, currentCategory]);
 
   const fetchTrending = async (category = 'All', isMore = false) => {
     if (isMore && !nextPageToken) return;
@@ -211,7 +218,6 @@ export default function App() {
     }
 
     if (cat === 'Uploaded') {
-      setVideos(userVideos);
       setActiveTab('home');
       setSelectedVideo(null);
     } else {
@@ -219,18 +225,21 @@ export default function App() {
     }
   };
 
-  const handleUpload = async (videoData: { videoId: string, title: string }) => {
+  const handleUpload = async (videoData: { videoId: string, title: string, description?: string }) => {
     if (!user) return;
     try {
       await addDoc(collection(db, 'userVideos'), {
         userId: user.uid,
         videoId: videoData.videoId,
         title: videoData.title,
+        description: videoData.description || '',
         thumbnail: `https://img.youtube.com/vi/${videoData.videoId}/hqdefault.jpg`,
         channelTitle: user.displayName || 'Creator',
         createdAt: serverTimestamp(),
       });
       setShowUploadModal(false);
+      setCurrentCategory('Uploaded');
+      setActiveTab('home');
     } catch (err) { console.error(err); }
   };
 
@@ -407,29 +416,11 @@ export default function App() {
           </AnimatePresence>
 
           {/* Upload Modal */}
-          {showUploadModal && (
-            <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[100] p-4">
-              <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-yt-dark-grey p-6 rounded-2xl w-full max-w-md border border-white/10">
-                <h2 className="text-2xl font-bold mb-4 font-hindi text-red-500">Apna Video Yahan Dalein</h2>
-                <form onSubmit={(e: any) => { e.preventDefault(); handleUpload({ videoId: e.target.videoId.value, title: e.target.title.value }); }}>
-                  <div className="space-y-4">
-                    <div className="space-y-1">
-                      <label className="text-xs text-yt-light-grey ml-1">Video ID (YouTube se)</label>
-                      <input name="videoId" placeholder="Jaise: M-34S-qj7c8" className="w-full bg-yt-black border border-white/10 rounded-lg p-3 text-sm focus:border-red-500 transition-colors" required />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs text-yt-light-grey ml-1">Video ka Naam</label>
-                      <input name="title" placeholder="Apna pasandida title likhein" className="w-full bg-yt-black border border-white/10 rounded-lg p-3 text-sm focus:border-red-500 transition-colors" required />
-                    </div>
-                    <div className="flex gap-3 pt-2">
-                      <button type="button" onClick={() => setShowUploadModal(false)} className="flex-1 px-4 py-2 rounded-xl border border-white/10 hover:bg-white/5 transition-colors font-medium">Baad mein</button>
-                      <button type="submit" className="flex-1 bg-red-600 font-bold py-2 rounded-xl hover:bg-red-700 transition-colors shadow-lg shadow-red-600/20">Daliye (Upload)</button>
-                    </div>
-                  </div>
-                </form>
-              </motion.div>
-            </div>
-          )}
+          <UploadModal 
+            isOpen={showUploadModal} 
+            onClose={() => setShowUploadModal(false)} 
+            onUpload={handleUpload} 
+          />
         </main>
       </div>
     </div>
