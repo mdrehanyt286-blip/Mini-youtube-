@@ -18,22 +18,38 @@ const cache = new Map<string, { data: any, timestamp: number }>();
 const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
 
 const handleYoutubeError = (error: any, res: any, context: string) => {
-  if (error.response?.data) {
-    console.error(`YouTube ${context} Error Detail:`, JSON.stringify(error.response.data, null, 2));
-    const apiMsg = error.response.data.error?.message || "Unknown YouTube error";
-    const reason = error.response.data.error?.errors?.[0]?.reason || "unknown";
+  const errorData = error.response?.data?.error;
+  
+  if (errorData) {
+    const apiMsg = errorData.message || "Unknown YouTube error";
+    const errors = errorData.errors || [];
+    const reason = errors[0]?.reason || "unknown";
+    
+    console.error(`YouTube ${context} [${reason}]:`, apiMsg);
     
     let userFriendlyMsg = apiMsg;
-    if (reason === 'quotaExceeded') {
-      userFriendlyMsg = "YouTube API Quota Limit Khatam (Reset hone tak intezar karein).";
+    if (reason === 'quotaExceeded' || reason === 'dailyLimitExceeded') {
+      userFriendlyMsg = "YouTube API Quota Limit Khatam (Daily Limit reached). Reset hone tak intezar karein ya apni API Key check karein.";
     } else if (reason === 'keyInvalid') {
-      userFriendlyMsg = "Invalid API Key. Please check your YOUTUBE_API_KEY.";
+      userFriendlyMsg = "Invalid API Key. Please update your YOUTUBE_API_KEY in Secrets.";
+    } else if (reason === 'rateLimitExceeded') {
+      userFriendlyMsg = "Rate limit hit. Thoda ruk kar try karein.";
+    } else if (reason === 'accessNotConfigured') {
+      userFriendlyMsg = "YouTube Data API v3 enable nahi hai aapke Google Cloud Console mein.";
     }
 
-    res.status(500).json({ error: `Failed during ${context}`, detail: userFriendlyMsg, raw: error.response.data });
+    res.status(error.response.status || 500).json({ 
+      error: `Failed during ${context}`, 
+      detail: userFriendlyMsg,
+      code: errorData.code,
+      reason: reason
+    });
   } else {
-    console.error(`YouTube ${context} Error:`, error.message);
-    res.status(500).json({ error: `Failed during ${context}`, detail: error.message });
+    console.error(`YouTube ${context} Network Error:`, error.message);
+    res.status(500).json({ 
+      error: `Failed during ${context}`, 
+      detail: "Hawa mein problem hai! Network check karo." 
+    });
   }
 };
 

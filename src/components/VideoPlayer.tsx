@@ -103,7 +103,9 @@ export default function VideoPlayer({
         setRelatedVideos(items);
       }
       setNextPageToken(res.data.nextPageToken || null);
-    } catch (err) { console.error(err); }
+    } catch (err: any) {
+      console.error("Related Videos Error:", err.response?.data?.detail || err.message);
+    }
     finally { setIsFetchingMore(false); }
   };
 

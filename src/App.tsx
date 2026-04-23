@@ -127,7 +127,10 @@ export default function App() {
       }
       setNextPageToken(res.data.nextPageToken || null);
     } catch (err: any) {
-      const msg = err.response?.data?.detail || err.response?.data?.error || "Network Error: Could not connect to API.";
+      const respData = err.response?.data;
+      const msg = typeof respData?.detail === 'string' 
+        ? respData.detail 
+        : (typeof respData?.error === 'string' ? respData.error : "Network Error: API se jud nahi pa rahe.");
       setErrorMsg(msg);
     } finally {
       setIsFetchingMore(false);
@@ -174,7 +177,10 @@ export default function App() {
       }
       setNextPageToken(res.data.nextPageToken || null);
     } catch (err: any) {
-      const msg = err.response?.data?.detail || err.response?.data?.error || "Search failed.";
+      const respData = err.response?.data;
+      const msg = typeof respData?.detail === 'string' 
+        ? respData.detail 
+        : (typeof respData?.error === 'string' ? respData.error : "Search fail ho gaya bhaya.");
       setErrorMsg(msg);
     } finally {
       setIsFetchingMore(false);
@@ -290,7 +296,7 @@ export default function App() {
                 onClick={() => fetchTrending(currentCategory)}
                 className="bg-red-500 text-white px-3 py-1 rounded-lg text-sm font-bold hover:bg-red-600 transition-colors"
               >
-                Retry
+                Phir se Koshish Karein
               </button>
             </div>
           )}
